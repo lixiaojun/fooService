@@ -21,7 +21,7 @@ def tostring(dt):
     else:
         return dt
 
-_con_str = "mysql://root:wishlist2012@127.0.0.1:3306/mygift?charset=utf8"
+_con_str = "mysql://root:wishlist2012@localhost:3306/mygift?charset=utf8"
 db = create_engine(_con_str, echo=True)
 
 metadata = MetaData(db)
