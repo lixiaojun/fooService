@@ -86,7 +86,10 @@ class Login(UserResponse):
         if not logged():
             return render.login()
         else:
-            raise web.SeeOther('/')
+            uid = web.ctx.session.uid
+            query = mygift.query(User)
+            userInfo = query.filter(User.id == uid).first()
+            return render.home(userInfo)
     
     def POST(self):
         email, password = web.input().email, web.input().password
@@ -137,7 +140,7 @@ class Register(UserResponse):
                     query = mygift.query(User)
                     user = query.filter(User.email == email).first()
                     
-                    mygift.commit()
+                    #mygift.commit()
                     ret = self.register_success(user)
                     setSession(user)
                 else:
