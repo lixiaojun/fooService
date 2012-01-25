@@ -4,8 +4,12 @@ Created on 2012-1-8
 
 @author: qianmu.lxj
 '''
+from wsgilog import WsgiLog
 import copy
 import json
+import logging
+import os
+import sys
 import web
 
 def logged():
@@ -111,3 +115,18 @@ class FooResponse:
         ret['status'] = self.STATUS_CODE_CONFLICT
         ret['root']['message'] = 'Data Already Exist.'
         return json.dumps(ret)
+
+class config:
+    log_file =  os.path.join(os.path.dirname(__file__), '../../logs/wsgi.log').replace('\\','/')   
+    
+class Log(WsgiLog):
+    def __init__(self, application):
+        WsgiLog.__init__(
+            self,
+            application,
+            logformat = '%(message)s',
+            tofile = True,
+            file = config.log_file,
+            #interval = config.log_interval,
+            #backups = config.log_backups
+            )
