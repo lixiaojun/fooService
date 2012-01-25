@@ -6,6 +6,7 @@ Created on 2012-1-6
 @author: qianmu.lxj
 '''
 from apps import my, user, search
+from apps.fooinc import Log
 import web
 urls = (
         "/?", "Index", 
@@ -20,7 +21,7 @@ app = web.application(urls, globals())
 
 
 if web.config.get('_session') is None:
-    session = web.session.Session(app, web.session.DiskStore('sessions'),\
+    session = web.session.Session(app, web.session.DiskStore('../data/sessions'),\
                                    initializer = {'loggedin':False, 'uid':0})
     web.config._session = session
 else:
@@ -36,6 +37,6 @@ def session_hook():
 app.add_processor(web.loadhook(session_hook))
     
 if __name__ == "__main__" :
-    #web.wsgi.runwsgi = lambda func, addr=None: web.wsgi.runfcgi(func, addr)
-    app.run()
+    web.wsgi.runwsgi = lambda func, addr=None: web.wsgi.runfcgi(func, addr)
+    app.run(Log)
     
