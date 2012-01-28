@@ -83,8 +83,8 @@ mapper(ProductPrice, product_price_tb)
 
 
 MygiftSession = sessionmaker(db)
-mygift = MygiftSession()
-mygift.autocommit = True
+mygift = MygiftSession(autoflush = True, autocommit=True)
+#mygift.autocommit = True
 
 
 if __name__ == "__main__":
