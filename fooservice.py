@@ -32,6 +32,7 @@ if web.config.get('_session') is None:
     web.config._session = session
 else:
     session = web.config._session
+    
 
 class Index:
     def GET(self):

@@ -48,7 +48,7 @@ class SearchProduct(SearchResponse, FooAuth):
         if self.is_logged:
             return render.product()
         else:
-            return web.SeeOther('../user')
+            raise web.SeeOther('/user/login')
         
     def POST(self):
         if self.is_logged:

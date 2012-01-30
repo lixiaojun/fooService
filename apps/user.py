@@ -21,11 +21,16 @@ urls = (
         '/register', 'Register',
         )
 
+def _toSession():
+    web.ctx.homepath = None
+    
 def setSession(user):
+    _toSession()
     web.ctx.session.loggedin = True
     web.ctx.session.uid = user.id
     
 def resetSession():
+    _toSession()
     web.ctx.session.loggedin = False
     web.ctx.session.uid = 0
 
