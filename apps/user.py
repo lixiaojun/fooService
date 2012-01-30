@@ -166,4 +166,4 @@ class Register(UserResponse):
     
 app = web.application(urls, globals())
 app.notfound = notfound
-app.internalerror = internalerror
+#app.internalerror = internalerror
