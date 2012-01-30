@@ -8,6 +8,12 @@ Created on 2012-1-6
 from apps import my, user, search
 from apps.fooinc import Log
 import web
+
+try:
+    import conf
+except ImportError:
+    import default_conf as conf
+
 urls = (
         "/?", "Index", 
         "/my", my.app,
@@ -15,13 +21,13 @@ urls = (
         "/search", search.app,
         )
 
-web.config.session_parameters['ignore_expiry'] = True
+web.config.debug = conf.debug
 
 app = web.application(urls, globals())
 
-
+web.config.session_parameters['ignore_expiry'] = True
 if web.config.get('_session') is None:
-    session = web.session.Session(app, web.session.DiskStore('../data/sessions'),\
+    session = web.session.Session(app, web.session.DiskStore(conf.sessions_path),\
                                    initializer = {'loggedin':False, 'uid':0})
     web.config._session = session
 else:

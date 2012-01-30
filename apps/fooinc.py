@@ -12,6 +12,11 @@ import os
 import sys
 import web
 
+RET_JSON_FORMAT = {
+                   'status':400,
+                   'root':{}
+                   }
+
 def logged():
     if web.ctx.session.loggedin == True:
         return True
@@ -25,11 +30,6 @@ def notfound():
 def internalerror():
     res = FooResponse()
     return web.internalerror(res.error())
-
-RET_JSON_FORMAT = {
-                   'status':400,
-                   'root':{}
-                   }
 
 class FooAuth:
     is_logged = False
