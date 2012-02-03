@@ -80,7 +80,8 @@ class MyWishAdd(MyResponse, FooAuth):
                 if gift.status == MY_WISH_STATUS_DELETED:
                     gift.status = MY_WISH_STATUS_FOLLOW
                 if mygift.is_modified(gift):
-                    print mygift.add(gift)
+                    mygift.add(gift)
+                    return self.success()
         else:
             return self.forbidden()
     
@@ -107,7 +108,7 @@ class MyWishUndo(MyResponse, FooAuth):
             if gift is not None:
                 gift.status = MY_WISH_STATUS_DELETED
                 if mygift.is_modified(gift):
-                    print mygift.add(gift)
+                    mygift.add(gift)
                     return self.success()
             else:
                 return self.failed()
