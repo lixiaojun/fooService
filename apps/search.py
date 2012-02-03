@@ -6,7 +6,8 @@ Created on 2012-1-10
 '''
 
 from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
-from models.mygift import Product, mygift
+from apps.my import MY_WISH_STATUS_FOLLOW, MY_WISH_STATUS_BUYED
+from models.mygift import Product, mygift, WishList
 import json
 import web
 
@@ -15,6 +16,7 @@ urls = (
         "/product/?", "SearchProduct",
         "/product/title/?", "SearchProduct",
         "/product/id/?", "SearchProductById",
+        "/product/pkey/?", "SearchProductByPkey",
         )
 
 class SearchResponse(FooResponse):
@@ -58,6 +60,12 @@ class SearchProduct(SearchResponse, FooAuth):
         else:
             return self.forbidden()
         
+    def _get_my_follow(self):
+        uid = self.uid
+        query = mygift.query(WishList)
+        wishlist = query.filter(WishList.user_id == uid).\
+                filter(WishList.status == MY_WISH_STATUS_FOLLOW).filter(WishList.status == MY_WISH_STATUS_BUYED).all()
+        
     def _search_product(self, search):
         if search is None:
             search = 'Nothing'
@@ -92,6 +100,26 @@ class SearchProductById(SearchResponse, FooAuth):
             search = 'Nothing'  
         query = mygift.query(Product)
         products = query.filter(Product.id == search).all()
+        return products
+    
+class SearchProductByPkey(SearchResponse, FooAuth):
+    def __init__(self):
+        SearchResponse.__init__(self)
+        FooAuth.__init__(self)
+    
+    def POST(self):
+        if self.is_logged:
+            product_pkey = web.input().search
+            products = self._search_product_by_pkey(product_pkey)
+            return self.product_success(products)
+        else:
+            return self.forbidden()
+        
+    def _search_product_by_pkey(self, search):
+        if search is None:
+            search = 'Nothing'  
+        query = mygift.query(Product)
+        products = query.filter(Product.pkey == search).all()
         return products
 
 app = web.application(urls, globals())

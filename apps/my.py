@@ -13,9 +13,14 @@ import web
 urls = (
         "/wish/?", "MyWish",
         "/wish/follow", "MyWishAdd",
-        "/wish/delete", "MyWishDelete",
+        "/wish/undo", "MyWishUndo",
         "/wish/buyed", "MyWishBuyed",
+        "/wish/again", "MyWishAgain",
         )
+
+MY_WISH_STATUS_FOLLOW = 'follow'
+MY_WISH_STATUS_DELETED = 'deleted'
+MY_WISH_STATUS_BUYED = 'buyed'
 
 
 
@@ -59,8 +64,9 @@ class MyWishAdd(MyResponse, FooAuth):
     def POST(self):
         if self.is_logged:
             pkey = web.input().pkey
-            uid = web.ctx.session.uid
-            if not self._gift_exsit(uid, pkey):
+            uid = self.uid
+            gift = self._gift_exsit(uid, pkey)
+            if not gift:
                 new = WishList()
                 new.user_id = uid
                 new.product_pkey = pkey
@@ -69,7 +75,10 @@ class MyWishAdd(MyResponse, FooAuth):
                 
                 return self.success()
             else:
-                return self.conflict()
+                if gift.status == MY_WISH_STATUS_DELETED:
+                    gift.status = MY_WISH_STATUS_DELETED
+                if mygift.is_modified(gift):
+                    print mygift.add(gift)
         else:
             return self.forbidden()
     
@@ -78,10 +87,55 @@ class MyWishAdd(MyResponse, FooAuth):
         query = mygift.query(WishList)
         gift = query.filter(WishList.product_pkey == pkey).filter(WishList.user_id == uid).first()
         if gift:
-            flag = True
+            flag = gift
         return flag
-        
     
+class MyWishUndo(MyResponse, FooAuth):
+    def __init__(self):
+        MyResponse.__init__(self)
+        FooAuth.__init__(self)
+    
+    def POST(self):
+        if self.is_logged:
+            pkey = web.input().pkey
+            uid = self.uid
+
+            query = mygift.query(WishList)
+            gift = query.filter(WishList.product_pkey == pkey).filter(WishList.user_id == uid).first()
+            if gift is not None:
+                gift.status = MY_WISH_STATUS_DELETED
+                if mygift.is_modified(gift):
+                    print mygift.add(gift)
+                    return self.success()
+            else:
+                return self.failed()
+            
+        else:
+            return self.forbidden()
+        
+class MyWishAgain(MyResponse, FooAuth):
+    def __init__(self):
+        MyResponse.__init__(self)
+        FooAuth.__init__(self)
+    
+    def POST(self):
+        if self.is_logged:
+            pkey = web.input().pkey
+            uid = self.uid
+
+            query = mygift.query(WishList)
+            gift = query.filter(WishList.product_pkey == pkey).filter(WishList.user_id == uid).first()
+            if gift is not None and gift.status == MY_WISH_STATUS_BUYED:
+                gift.status = MY_WISH_STATUS_FOLLOW
+                if mygift.is_modified(gift):
+                    print mygift.add(gift)
+                    return self.success()
+            else:
+                return self.failed()
+            
+        else:
+            return self.forbidden()
+            
 class MyWish(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
@@ -95,10 +149,11 @@ class MyWish(MyResponse, FooAuth):
             
     def POST(self):
         if self.is_logged:
-            uid = web.ctx.session.uid
+            uid = self.uid
             query = mygift.query(WishList)
             product_query = mygift.query(Product)
-            wishlist = query.filter(WishList.user_id == uid).all()
+            wishlist = query.filter(WishList.user_id == uid).\
+                filter(WishList.status == MY_WISH_STATUS_FOLLOW).filter(WishList.status == MY_WISH_STATUS_BUYED).all()
             count = len(wishlist)
             for i in range(count):
                 wishlist[i] = wishlist[i]._to_dict()

@@ -4,15 +4,26 @@ Created on 2012-1-7
 
 @author: qianmu.lxj
 '''
-from apps.fooinc import FooResponse, notfound, internalerror, logged
+from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
+from libs.utils import encryptor
 from models.mygift import mygift, User, NOW
+import copy
 import hashlib
 import json
 import web
 
+try:
+    import conf
+except ImportError:
+    import default_conf as conf
+
 USER_PRIVILEGE_ADMIN = 0
 USER_PRIVILEGE_MEMBER = 1
 USER_PRIVILEGE_VIP = 2
+
+COOKIE_FORMAT = {'uid':-1, 'login_time':''}
+cookie_auth_time = conf.COOKIE_AUTH_MAX_TIME
+cookie_auth_name = conf.COOKIE_AUTH_NAME
 
 urls = (
         '/?', 'UserIndex',
@@ -21,26 +32,25 @@ urls = (
         '/register', 'Register',
         )
 
-def _toSession():
-    web.ctx.homepath = None
+def revocation():
+    auth = copy.deepcopy(COOKIE_FORMAT)
+    auth = encryptor.arc4_encode(json.dumps(auth))
+    web.setcookie(cookie_auth_name, auth, expires=-7, httponly=True, path='/')
     
-def setSession(user):
-    _toSession()
-    web.ctx.session.loggedin = True
-    web.ctx.session.uid = user.id
-    
-def resetSession():
-    _toSession()
-    web.ctx.session.loggedin = False
-    web.ctx.session.uid = 0
+def accredit(user):
+    if user is not None and user.id > 0:
+        auth = copy.deepcopy(COOKIE_FORMAT)
+        auth['uid'] = user.id
+        auth['login_time'] = NOW
+        auth = encryptor.arc4_encode(json.dumps(auth))
+        print auth
+        if auth:
+            web.setcookie(cookie_auth_name, auth, expires=cookie_auth_time, httponly=True, path='/')
 
 class UserIndex:
     def GET(self):
-        if logged():
-            render = web.template.render('templates')
-            return render.test()
-        else:
-            raise web.SeeOther('/login')
+        render = web.template.render('templates')
+        return render.test()
 
 class UserResponse(FooResponse):
     
@@ -86,12 +96,16 @@ class UserResponse(FooResponse):
 
 render = web.template.render('templates/user')
 
-class Login(UserResponse):
+class Login(UserResponse, FooAuth):
+    def __init__(self):
+        UserResponse.__init__(self)
+        FooAuth.__init__(self)
+    
     def GET(self):
-        if not logged():
+        if not self.logged():
             return render.login()
         else:
-            uid = web.ctx.session.uid
+            uid = self.uid
             query = mygift.query(User)
             userInfo = query.filter(User.id == uid).first()
             return render.home(userInfo)
@@ -106,25 +120,31 @@ class Login(UserResponse):
                 passwd = hashlib.md5(password).hexdigest()
                 if(passwd == user.password):
                     ret = self.login_success(user)
-                    setSession(user)
+                    accredit(user)
                 else:
-                    resetSession()
+                    revocation()
             else:
-                resetSession()
+                revocation()
         except:
-            resetSession()
+            revocation()
             ret = self.error()
         return ret
      
     
 class Logout(UserResponse):
+    def __init__(self):
+        UserResponse.__init__(self)
+    
     def GET(self):
-        resetSession()
-        web.ctx.session.kill()
+        revocation()
         return self.logout_success()
         
     
-class Register(UserResponse):
+class Register(UserResponse, FooAuth):
+    def __init__(self):
+        UserResponse.__init__(self)
+        FooAuth.__init__(self)
+    
     def GET(self):
         return render.register()
 
@@ -147,7 +167,7 @@ class Register(UserResponse):
                     
                     #mygift.commit()
                     ret = self.register_success(user)
-                    setSession(user)
+                    accredit(user)
                 else:
                     ret = self.register_failed(FooResponse.STATUS_CODE_CONFLICT)
         except:
@@ -166,4 +186,4 @@ class Register(UserResponse):
     
 app = web.application(urls, globals())
 app.notfound = notfound
-#app.internalerror = internalerror
+app.internalerror = internalerror

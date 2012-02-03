@@ -8,7 +8,7 @@
     <meta name="author" content="">
 
     <!-- Le styles -->
-    <link href="/static/css/bootstrap/1.4.0/bootstrap.min.css" rel="stylesheet">
+    <link href="/test/static/css/bootstrap/1.4.0/bootstrap.min.css" rel="stylesheet">
     
     <style type="text/css">
       /* Override some defaults */
@@ -63,9 +63,9 @@
 
     </style>
 
-    <script type="text/javascript" src="/static/javascript/jquery-1.7.1.min.js"></script>
-    <script type="text/javascript" src="/static/javascript/test.js"></script>
-    <script type="text/javascript" src="/static/javascript/bootstrap/1.4.0/bootstrap-tabs.js"></script>
+    <script type="text/javascript" src="/test/static/javascript/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="/test/static/javascript/test.js"></script>
+    <script type="text/javascript" src="/test/static/javascript/bootstrap/1.4.0/bootstrap-tabs.js"></script>
     <script type="text/javascript">
 		load();
 	</script>
@@ -76,7 +76,12 @@
     <div class="topbar">
       <div class="fill">
         <div class="container">
-          <a class="brand" href="#">Loggedin</a>
+          <a class="brand">Loggedin</a>
+          <form id="login" action="" class="pull-right" onsubmit="return loginTest();">
+            <input name="email" class="input-small" type="text" placeholder="Email">
+            <input name="password" class="input-small" type="password" placeholder="Password">
+            <button class="btn" type="submit">Sign in</button>
+          </form>
         </div>
       </div>
     </div>
@@ -100,8 +105,11 @@
 				<br>
 				<label>ID:</label><input type=text name="id" />
 				<button type="button" name="id">Search</button>
+				<br>
+				<label>pkey:</label><input type=text name="pkey" />
+				<button type="button" name="pkey">Search</button>
 				
-				<div id="info">
+				<div class="info">
 				This is some messages.
 				</div>
 			  </div>
@@ -109,11 +117,11 @@
 			      <label>Title:</label><input type=text name="title" />
 				<button type="button" name="title">Search</button>
 				<br>
-				<div id="list">
+				<div class="list">
 				
 				</div>
 				
-				<div id="info">
+				<div class="info">
 				This is some messages.
 				</div>
 			  </div>
@@ -121,12 +129,12 @@
 			      <button type="button" name="mywish">mywish</button>
 					<br>
 					
-					<div id="list">
+					<div class="list">
 					</div>
 					
 					<br>
 					
-					<div id="info">
+					<div class="info">
 					This is some messages.
 					</div>
 			  </div>

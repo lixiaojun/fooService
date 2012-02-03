@@ -8,7 +8,7 @@ function bindSearchClick(){
    				url: "/search/product/"+name,
    				data: "search="+val,
 				success: function(msg){
-					var info = $("div[id='info']");
+					var info = $("div[id='search'] > div[class='info']");
 				    info.text(msg);
 				}
 			});
@@ -28,9 +28,9 @@ function bindSearchWishClick(){
    				url: "/search/product/"+name,
    				data: "search="+val,
 				success: function(msg){
-					var list = $("div[id='list']");
+					var list = $("div[id='addwish'] > div[class='list']");
 					list.empty();
-					var info = $("div[id='info']");
+					var info = $("div[id='addwish'] > div[class='info']");
 				    info.text(msg);
 				    msg = JSON.parse(msg);
 				    if ( msg.status == 200){
@@ -59,7 +59,7 @@ function bindAddWishClick(){
    				url: href,
    				data: "pkey="+pkey,
 				success: function(msg){
-					var info = $("div[id='info']");
+					var info = $("div[class='info']");
 				    info.text(msg);
 				}
 			});
@@ -73,20 +73,66 @@ function bindMyWishClick(){
    				type: "POST",
    				url: "/my/wish",
 				success: function(msg){
-					var list = $("div[id='mywish'] >div[id='list']");
+					var list = $("div[id='mywish'] > div[class='list']");
 					list.empty();
-					var info = $("div[id='mywish'] >div[id='info']");
+					var info = $("div[id='mywish'] > div[class='info']");
 				    info.text(msg);
 				    msg = JSON.parse(msg);
 				    if ( msg.status == 200){
 				    	var data = msg.root.data
 				    	for( var key in data){
 				    		var one = data[key]
-				    		list.append("<b>"+one['title']+"</b> <button class='opt' href='/my/wish/delete' value="+one['pkey']+"> delete </button><button class='opt' href='/my/wish/buyed' value="+one['pkey']+"> buyed </button><br>");
+				    		list.append("<b>"+one['title']+"</b> <button class='opt' href='/my/wish/undo' value="+one['pkey']+"> delete </button><button class='opt' href='/my/wish/buyed' value="+one['pkey']+"> buyed </button><br>");
 				    	}
 				    	
 				    	//bindAddClick()
+				    	bindMyWishOptClick();
 				    }
+				}
+			});
+	});
+}
+
+function bindMyWishOptClick(){
+	$("button[class='opt']").click(function(){
+		var tourl = $(this).attr('href');
+		var pkey = $(this).attr('value');
+		$.ajax({
+   				type: "POST",
+   				url: tourl,
+   				data: "pkey="+pkey,
+				success: function(msg){
+					var old_msg = msg;
+					msg = JSON.parse(msg);
+					var info = $("div[id='mywish'] > div[class='info']");
+				    info.text(msg);
+					alert(old_msg);
+				}
+			});
+	});
+}
+
+function loginTest(){
+	
+	return false;
+}
+function bindLoginClick(){
+	$("form[id='login'] > button").click(function(){
+	    var email = $(this).parent().children("input[name='email']").val();
+	    var passwd = $(this).parent().children("input[name='password']").val();
+	    $.ajax({
+   				type: "POST",
+   				url: "/user/login",
+   				data: "email="+email+"&password="+passwd,
+				success: function(msg){
+					var old_msg = msg
+					msg = JSON.parse(msg);
+					if (msg.status == 200){
+					    var root = msg.root;
+					    $(this).parent().hide()
+					}else{
+						alert(old_msg);
+					}
 				}
 			});
 	});
@@ -95,6 +141,7 @@ function bindMyWishClick(){
 function load(){
 	$(function () {
 			$('.tabs').tabs();
+			bindLoginClick();
 			bindSearchClick();
 			bindSearchWishClick();
 			bindMyWishClick();

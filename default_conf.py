@@ -12,3 +12,9 @@ debug = True
 PWD = os.path.dirname(os.path.realpath(__file__))
 
 sessions_path = os.path.join(PWD, '../data/sessions')
+
+COOKIE_AUTH_KEY_ARC4 = 'YNDtvGbzRCKzEOoPKDTwo3ZTzVYX'
+
+COOKIE_AUTH_NAME = 'CYE_SESSIONID'
+
+COOKIE_AUTH_MAX_TIME = 24*60*60*90
