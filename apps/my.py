@@ -7,6 +7,7 @@ Created on 2012-1-6
 
 from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
 from models.mygift import WishList, NOW, mygift, Product
+from sqlalchemy.sql.expression import or_
 import json
 import web
 
@@ -71,12 +72,13 @@ class MyWishAdd(MyResponse, FooAuth):
                 new.user_id = uid
                 new.product_pkey = pkey
                 new.create_time = NOW
+                new.status = MY_WISH_STATUS_FOLLOW
                 mygift.add(new)
                 
                 return self.success()
             else:
                 if gift.status == MY_WISH_STATUS_DELETED:
-                    gift.status = MY_WISH_STATUS_DELETED
+                    gift.status = MY_WISH_STATUS_FOLLOW
                 if mygift.is_modified(gift):
                     print mygift.add(gift)
         else:
@@ -153,7 +155,7 @@ class MyWish(MyResponse, FooAuth):
             query = mygift.query(WishList)
             product_query = mygift.query(Product)
             wishlist = query.filter(WishList.user_id == uid).\
-                filter(WishList.status == MY_WISH_STATUS_FOLLOW).filter(WishList.status == MY_WISH_STATUS_BUYED).all()
+                filter(or_(WishList.status == MY_WISH_STATUS_FOLLOW, WishList.status == MY_WISH_STATUS_BUYED)).all()
             count = len(wishlist)
             for i in range(count):
                 wishlist[i] = wishlist[i]._to_dict()
