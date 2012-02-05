@@ -71,7 +71,7 @@ class MyWishAdd(MyResponse, FooAuth):
                 new = WishList()
                 new.user_id = uid
                 new.product_pkey = pkey
-                new.create_time = NOW
+                new.create_time = time.strftime('%Y-%m-%d %X', time.localtime())
                 new.status = MY_WISH_STATUS_FOLLOW
                 mygift.add(new)
                 

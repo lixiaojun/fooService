@@ -41,7 +41,7 @@ def accredit(user):
     if user is not None and user.id > 0:
         auth = copy.deepcopy(COOKIE_FORMAT)
         auth['uid'] = user.id
-        auth['login_time'] = NOW
+        auth['login_time'] = time.strftime('%Y-%m-%d %X', time.localtime())
         auth = encryptor.arc4_encode(json.dumps(auth))
         print auth
         if auth:
@@ -158,7 +158,7 @@ class Register(UserResponse, FooAuth):
                     new = User()
                     new.email = email
                     new.password = hashlib.md5(passwd).hexdigest()
-                    new.register_time = NOW
+                    new.register_time = time.strftime('%Y-%m-%d %X', time.localtime())
                     new.register_ip = web.ctx.ip
                     mygift.add(new)
                     
