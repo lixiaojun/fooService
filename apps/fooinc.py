@@ -5,10 +5,12 @@ Created on 2012-1-8
 @author: qianmu.lxj
 '''
 from libs.utils import encryptor
-from wsgilog import WsgiLog
+from wsgilog import WsgiLog, LogStdout
 import copy
 import json
+import logging
 import os
+import sys
 import web
 
 RET_JSON_FORMAT = {
@@ -74,7 +76,7 @@ class FooResponse:
     STATUS_CODE_ERROR = 500
     
     def __init__(self):
-        self.ret =  copy.deepcopy(RET_JSON_FORMAT)
+        self.ret =  {'status':400,'root':{}}
     
     def success(self):
         return self._success2json()
@@ -130,9 +132,6 @@ class FooResponse:
         ret['root']['message'] = 'Data Already Exist.'
         return json.dumps(ret)
 
-class config:
-    log_file =  os.path.join(os.path.dirname(__file__), '../../logs/wsgi.log').replace('\\','/')   
-    
 class Log(WsgiLog):
     def __init__(self, application):
         WsgiLog.__init__(
@@ -140,7 +139,10 @@ class Log(WsgiLog):
             application,
             logformat = '%(message)s',
             tofile = True,
-            file = config.log_file,
-            #interval = config.log_interval,
-            #backups = config.log_backups
+            file = conf.log_file,
+            interval = conf.log_interval,
+            backups = conf.log_backups
             )
+        
+        sys.stdout = LogStdout(self.logger, logging.INFO)
+        sys.stderr = LogStdout(self.logger, logging.ERROR)
