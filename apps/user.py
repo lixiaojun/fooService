@@ -6,10 +6,11 @@ Created on 2012-1-7
 '''
 from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
 from libs.utils import encryptor
-from models.mygift import mygift, User, NOW
+from models.mygift import User
 import copy
 import hashlib
 import json
+import time
 import web
 
 try:
@@ -24,6 +25,9 @@ USER_PRIVILEGE_VIP = 2
 COOKIE_FORMAT = {'uid':-1, 'login_time':''}
 cookie_auth_time = conf.COOKIE_AUTH_MAX_TIME
 cookie_auth_name = conf.COOKIE_AUTH_NAME
+
+USER_STATUS_ACTIVE = 'active'
+USER_STATUS_LOCKED = 'locked'
 
 urls = (
         '/?', 'UserIndex',
@@ -67,26 +71,26 @@ class UserResponse(FooResponse):
         return self._register_failed2json(code)
     
     def _login_success2json(self,user):
-        ret = self.ret
+        ret = self._ret()
         if user is not None:
             ret['status'] = FooResponse.STATUS_CODE_SUCCESS
             ret['root']['uID'] = user.id
             ret['root']['nickName'] = user.nickname
             ret['root']['email'] = user.email
-            ret['root']['status'] = user.status
+            ret['root']['ustatus'] = user.ustatus
             ret['root']['message'] = 'Request succeeded'
         return json.dumps(ret)
     
     def _register_success2json(self, user):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = FooResponse.STATUS_CODE_SUCCESS
         ret['root']['uID'] = user.id
-        ret['root']['status'] = user.status
+        ret['root']['ustatus'] = user.ustatus
         ret['root']['message'] = 'Request succeeded'
         return json.dumps(ret)
     
     def _register_failed2json(self, code):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = code
         if code is FooResponse.STATUS_CODE_CONFLICT:
             ret['root']['message'] = 'User Already Exist.'
@@ -106,15 +110,16 @@ class Login(UserResponse, FooAuth):
             return render.login()
         else:
             uid = self.uid
-            query = mygift.query(User)
+            query = web.ctx.mygift.query(User)
             userInfo = query.filter(User.id == uid).first()
             return render.home(userInfo)
     
     def POST(self):
         email, password = web.input().email, web.input().password
         try:
-            query = mygift.query(User)
-            user = query.filter(User.email == email).first()
+            query = web.ctx.mygift.query(User)
+            user = query.filter(User.email == email).filter(User.ustatus == USER_STATUS_ACTIVE).first()
+            print user
             ret = self.forbidden()
             if user is not None:
                 passwd = hashlib.md5(password).hexdigest()
@@ -128,6 +133,7 @@ class Login(UserResponse, FooAuth):
         except:
             revocation()
             ret = self.error()
+            raise
         return ret
      
     
@@ -160,9 +166,9 @@ class Register(UserResponse, FooAuth):
                     new.password = hashlib.md5(passwd).hexdigest()
                     new.register_time = time.strftime('%Y-%m-%d %X', time.localtime())
                     new.register_ip = web.ctx.ip
-                    mygift.add(new)
+                    web.ctx.mygift.add(new)
                     
-                    query = mygift.query(User)
+                    query = web.ctx.mygift.query(User)
                     user = query.filter(User.email == email).first()
                     
                     #mygift.commit()
@@ -172,13 +178,14 @@ class Register(UserResponse, FooAuth):
                     ret = self.register_failed(FooResponse.STATUS_CODE_CONFLICT)
         except:
             ret = self.error()
+            raise
         return ret
             
         
     def _findUserByEmail(self, email):
         flag = False
         if email is not None:
-            query = mygift.query(User)
+            query = web.ctx.mygift.query(User)
             user = query.filter(User.email == email).first()
             if user:
                 flag = True   

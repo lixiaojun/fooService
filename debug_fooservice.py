@@ -9,4 +9,4 @@ from apps.fooinc import Log
 import fooservice as fooservice_
 
 if __name__ == '__main__':
-    fooservice_.app.run(Log)
+    fooservice_.app.run()

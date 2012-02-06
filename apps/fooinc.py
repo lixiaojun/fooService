@@ -82,7 +82,7 @@ class FooResponse:
         return self._success2json()
     
     def _success2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_SUCCESS
         ret['root']['message'] = 'Request succeeded'
         return json.dumps(ret)
@@ -91,7 +91,7 @@ class FooResponse:
         return self._forbidden2json()
         
     def _forbidden2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_FORBIDDEN
         ret['root']['message'] = 'Permission denied'
         return json.dumps(ret)
@@ -100,7 +100,7 @@ class FooResponse:
         return self._error2json()
     
     def _error2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_ERROR
         ret['root']['message'] = 'Server internal error.'
         return json.dumps(ret)
@@ -109,7 +109,7 @@ class FooResponse:
         return self._failed2json()
     
     def _failed2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_FAILED
         ret['root']['message'] = 'Request Failed.'
         return json.dumps(ret)
@@ -118,7 +118,7 @@ class FooResponse:
         return self._notfound2json()
     
     def _notfound2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_NOTFOUND
         ret['root']['message'] = 'Not found.'
         return json.dumps(ret)
@@ -127,10 +127,14 @@ class FooResponse:
         return self._conflict2json()
     
     def _conflict2json(self):
-        ret = self.ret
+        ret = self._ret()
         ret['status'] = self.STATUS_CODE_CONFLICT
         ret['root']['message'] = 'Data Already Exist.'
         return json.dumps(ret)
+    
+    def _ret(self):
+        self.ret =  {'status':400,'root':{}}
+        return self.ret
 
 class Log(WsgiLog):
     def __init__(self, application):

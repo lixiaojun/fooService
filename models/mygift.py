@@ -22,7 +22,7 @@ def tostring(dt):
         return dt
 
 _con_str = "mysql://root:wishlist2012@localhost:3306/mygift?charset=utf8"
-db = create_engine(_con_str, echo=True)
+db = create_engine(_con_str, echo=False)
 
 metadata = MetaData(db)
 
@@ -39,14 +39,14 @@ class User(object):
 class WishList(object):
     def _to_dict(self):
         _dict = {}
-        key_list = ['product_pkey', 'is_shared', 'create_time', 'expect_time', 'status']
+        key_list = ['product_pkey', 'is_shared', 'create_time', 'expect_price', 'wlstatus']
         for key in key_list:
             if key in self.__dict__.keys():
                 _dict[key] = tostring(self.__dict__[key])
         return _dict
         
     def __repr__(self):
-        return "%s(%r, %r, %r, %r)" % (self.__class__.__name__,self.id,self.user_id, self.product_pkey, self.status)
+        return "%s(%r, %r, %r, %r, %r)" % (self.__class__.__name__,self.id,self.user_id, self.product_pkey, self.wlstatus, self.expect_price)
 
 class ProductPrice(object):
     def _to_dict(self):
@@ -62,10 +62,12 @@ class ProductPrice(object):
     
 class Product(object):
     def _to_dict(self):
-        _dict = copy.deepcopy(self.__dict__)
-        for key in _dict.keys():
+        _dict = {}
+        for key in self.__dict__.keys():
             if key.find('_') >= 0:
-                del(_dict[key])
+                continue
+            else:
+                _dict[key] = self.__dict__[key] 
         price_key = 'history_price'
         if price_key in dir(self):
             _dict[price_key] = []

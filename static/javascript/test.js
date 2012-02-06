@@ -59,8 +59,9 @@ function bindAddWishClick(){
    				url: href,
    				data: "pkey="+pkey,
 				success: function(msg){
-					var info = $("div[class='info']");
+					var info = $("div[id='addwish'] > div[class='info']");
 				    info.text(msg);
+				    alert(msg)
 				}
 			});
 	});
@@ -82,11 +83,12 @@ function bindMyWishClick(){
 				    	var data = msg.root.data
 				    	for( var key in data){
 				    		var one = data[key]
-				    		list.append("<b>"+one['title']+"</b> <button class='opt' href='/my/wish/undo' value="+one['pkey']+"> delete </button><button class='opt' href='/my/wish/buyed' value="+one['pkey']+"> buyed </button><br>");
+				    		list.append("<b>"+one['title']+"["+one['expect_price']+"]"+"</b> <button class='opt' href='/my/wish/undo' value="+one['pkey']+"> delete </button><button class='opt' href='/my/wish/buyed' value="+one['pkey']+"> buyed </button><br><input type='text' class='except_price' id='"+one['pkey']+"' /><button class='opt_price' href='/my/wish/price' value="+one['pkey']+"> except </button><br>");
 				    	}
 				    	
 				    	//bindAddClick()
 				    	bindMyWishOptClick();
+				    	bindMyWishOptClick_price();
 				    }
 				}
 			});
@@ -137,6 +139,29 @@ function bindLoginClick(){
 			});
 	});
 }
+
+
+function bindMyWishOptClick_price(){
+	$("button[class='opt_price']").click(function(){
+		var tourl = $(this).attr('href');
+		var pkey = $(this).attr('value');
+		var price = $("input[id='"+pkey+"']").val();
+		$.ajax({
+   				type: "POST",
+   				url: tourl,
+   				data: "pkey="+pkey+"&price="+price,
+				success: function(msg){
+					var old_msg = msg;
+					msg = JSON.parse(msg);
+					var info = $("div[id='mywish'] > div[class='info']");
+				    info.text(msg);
+					alert(old_msg);
+				}
+			});
+	});
+}
+
+
 
 function load(){
 	$(function () {
