@@ -51,7 +51,7 @@ class MyProductFlag:
                 filter(WishList.wlstatus == MY_WISH_STATUS_FOLLOW).all()
         wishlist_follow_p, wishlist_follow_s = MyProductFlag._to_list(wishlist_follow)
         wishlist_buyed  = query.filter(WishList.user_id == uid).\
-                filter(or_(WishList.wlstatus == MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+.?[0-9]*" ')).all()
+                filter(or_(WishList.wlstatus == MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+" ')).all()
         wishlist_buyed_p, wishlist_buyed_s = MyProductFlag._to_list(wishlist_buyed)
         for i in range(len(products)):
             if products[i].pkey in wishlist_follow_p:

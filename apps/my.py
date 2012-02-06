@@ -195,7 +195,7 @@ class MyWish(MyResponse, FooAuth):
             query = web.ctx.mygift.query(WishList)
             product_query = web.ctx.mygift.query(Product)
             wishlist = query.filter(WishList.user_id == uid).\
-                filter(or_(WishList.wlstatus == MY_WISH_STATUS_FOLLOW, WishList.wlstatus == MY_WISH_STATUS_BUYED)).all()
+                filter(or_(WishList.wlstatus == MY_WISH_STATUS_FOLLOW, WishList.wlstatus == MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+" ')).all()
             count = len(wishlist)
             for i in range(count):
                 wishlist[i] = wishlist[i]._to_dict()
