@@ -5,7 +5,8 @@ Created on 2012-1-6
 @author: qianmu.lxj
 '''
 
-from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
+from apps.fooinc import FooResponse, notfound, internalerror, FooAuth, FooStatus
+from libs.utils import Validation
 from models.mygift import WishList, Product, ProductPrice
 from sqlalchemy.sql.expression import or_
 import json
@@ -17,14 +18,8 @@ urls = (
         "/wish/follow/?", "MyWishAdd",
         "/wish/undo/?", "MyWishUndo",
         "/wish/buyed/?", "MyWishBuyed",
-        "/wish/price/?", "MyWishExceptPrice",
+        "/wish/price/?", "MyWishExpectPrice",
         )
-
-MY_WISH_STATUS_FOLLOW = 'follow'
-MY_WISH_STATUS_DELETED = 'deleted'
-MY_WISH_STATUS_BUYED = 'buyed'
-
-
 
 class MyResponse(FooResponse):
     
@@ -39,47 +34,59 @@ class MyResponse(FooResponse):
     
     pass
 
-render = web.template.render('templates/my')
+class MyValidation(Validation):
+    
+    @staticmethod
+    def check_pkey(pkey):
+        ispass = False
+        if Validation.isMd5(pkey):
+            ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_mywishadd(pkey):
+        return MyValidation.check_pkey(pkey)
+    
+    @staticmethod
+    def check_mywishexpectprice(price, pkey):
+        ispass = False
+        if Validation.isMd5(pkey) and Validation.isPrice(price):
+            ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_mywishundo(pkey):
+        return MyValidation.check_pkey(pkey)
 
-class MyIndex(MyResponse, FooAuth):
-    def __init__(self):
-        MyResponse.__init__(self)
-        FooAuth.__init__(self)
-        
-    def GET(self): 
-        if self.is_logged:
-            return render.myindex()
-        else:
-            web.SeeOther('../user/login')
-            
+    @staticmethod
+    def check_mywishbuyed(pkey):
+        return MyValidation.check_pkey(pkey)          
 class MyWishAdd(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
         FooAuth.__init__(self)
-        
-    def GET(self):
-        if self.is_logged:
-            return render.addwish()
-        else:
-            web.SeeOther('../user/login')
             
     def POST(self):
         if self.is_logged:
             pkey = web.input().pkey
+            if not MyValidation.check_mywishadd(pkey):
+                return self.dataerror()
+            
             uid = self.uid
             gift = self._gift_exsit(uid, pkey)
+            
             if not gift:
                 new = WishList()
                 new.user_id = uid
                 new.product_pkey = pkey
                 new.create_time = time.strftime('%Y-%m-%d %X', time.localtime())
-                new.wlstatus = MY_WISH_STATUS_FOLLOW
+                new.wlstatus = FooStatus.MY_WISH_STATUS_FOLLOW
                 web.ctx.mygift.add(new)
                 
                 return self.success()
             else:
-                if gift.wlstatus == MY_WISH_STATUS_DELETED:
-                    gift.wlstatus = MY_WISH_STATUS_FOLLOW
+                if gift.wlstatus == FooStatus.MY_WISH_STATUS_DELETED:
+                    gift.wlstatus = FooStatus.MY_WISH_STATUS_FOLLOW
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
                     return self.success()
@@ -94,7 +101,7 @@ class MyWishAdd(MyResponse, FooAuth):
             flag = gift
         return flag
 
-class MyWishExceptPrice(MyResponse, FooAuth):
+class MyWishExpectPrice(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
         FooAuth.__init__(self)
@@ -103,19 +110,22 @@ class MyWishExceptPrice(MyResponse, FooAuth):
         if self.is_logged:
             price = web.input().price
             pkey = web.input().pkey
+            if not MyValidation.check_mywishexpectprice(price, pkey):
+                return self.dataerror()
+            
             uid = self.uid
-
             query = web.ctx.mygift.query(WishList)
             gift = query.filter(WishList.product_pkey == pkey).\
-                filter(WishList.user_id == uid).filter(WishList.wlstatus == MY_WISH_STATUS_FOLLOW).first()
+                filter(WishList.user_id == uid).filter(WishList.wlstatus == FooStatus.MY_WISH_STATUS_FOLLOW).first()
+            mret = self.failed()
             if gift:
                 gift.expect_price = price
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
-                    print gift
-                    return self.success()
-            else:
-                return self.failed()
+                    mret = self.success()
+                else:
+                    mret = self.notmodified()
+            return mret
             
         else:
             return self.forbidden()
@@ -128,22 +138,25 @@ class MyWishUndo(MyResponse, FooAuth):
     def POST(self):
         if self.is_logged:
             pkey = web.input().pkey
+            if not MyValidation.check_mywishundo(pkey):
+                return self.dataerror()
+            
             uid = self.uid
-
             query = web.ctx.mygift.query(WishList)
             gift = query.filter(WishList.product_pkey == pkey).filter(WishList.user_id == uid).first()
+            mret = self.failed()
             if gift is not None:
-                gift.wlstatus = MY_WISH_STATUS_DELETED
+                gift.wlstatus = FooStatus.MY_WISH_STATUS_DELETED
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
-                    return self.success()
-            else:
-                return self.failed()
+                    mret = self.success()
+                else:
+                    mret = self.notmodified()
+            return mret
             
         else:
             return self.forbidden()
 
-        
 class MyWishBuyed(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
@@ -152,42 +165,38 @@ class MyWishBuyed(MyResponse, FooAuth):
     def POST(self):
         if self.is_logged:
             pkey = web.input().pkey
+            if not MyValidation.check_mywishbuyed(pkey):
+                return self.dataerror()
+            
             uid = self.uid
-
             query = web.ctx.mygift.query(WishList)
             gift = query.filter(WishList.product_pkey == pkey).filter(WishList.user_id == uid)\
-                .filter(WishList.wlstatus == MY_WISH_STATUS_FOLLOW).first()
+                .filter(WishList.wlstatus == FooStatus.MY_WISH_STATUS_FOLLOW).first()
+            mret = self.failed()
             if gift:
-                gift.wlstatus = self._get_buyed_val_byPkey(gift.product_pkey)
-                gift.create_time = time.strftime('%Y-%m-%d %X', time.localtime())
+                gift.wlstatus = FooStatus.MY_WISH_STATUS_BUYED
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
-                    return self.success()
-            else:
-                return self.failed()
+                    mret = self.success()
+                else:
+                    mret = self.notmodified()
+            return mret
             
         else:
             return self.forbidden()
     
     def _get_buyed_val_byPkey(self, pkey):
-            my_flag = MY_WISH_STATUS_BUYED
+            my_flag = FooStatus.MY_WISH_STATUS_BUYED
             query = web.ctx.mygift.query(ProductPrice)
             pPrice = query.filter(ProductPrice.product_pkey == pkey).order_by(ProductPrice.update_time.desc()).first()
             if pPrice:
                 my_flag = pPrice.id
             return my_flag
-                   
-            
+                       
 class MyWish(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
         FooAuth.__init__(self)
-        
-    def GET(self):
-        if self.is_logged:
-            return render.mywish()
-        else:
-            web.SeeOther('../user/login')
             
     def POST(self):
         if self.is_logged:
@@ -195,7 +204,7 @@ class MyWish(MyResponse, FooAuth):
             query = web.ctx.mygift.query(WishList)
             product_query = web.ctx.mygift.query(Product)
             wishlist = query.filter(WishList.user_id == uid).\
-                filter(or_(WishList.wlstatus == MY_WISH_STATUS_FOLLOW, WishList.wlstatus == MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+" ')).all()
+                filter(or_(WishList.wlstatus == FooStatus.MY_WISH_STATUS_FOLLOW, WishList.wlstatus == FooStatus.MY_WISH_STATUS_BUYED)).all()
             count = len(wishlist)
             for i in range(count):
                 wishlist[i] = wishlist[i]._to_dict()
@@ -208,9 +217,6 @@ class MyWish(MyResponse, FooAuth):
         else:
             return self.forbidden()
         
-    
-
-    
 app = web.application(urls, globals())
 app.notfound = notfound
 app.internalerror = internalerror

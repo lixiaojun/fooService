@@ -4,8 +4,8 @@ Created on 2012-1-7
 
 @author: qianmu.lxj
 '''
-from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
-from libs.utils import encryptor
+from apps.fooinc import FooResponse, notfound, internalerror, FooAuth, FooStatus
+from libs.utils import encryptor, Validation
 from models.mygift import User
 import copy
 import hashlib
@@ -18,23 +18,21 @@ try:
 except ImportError:
     import default_conf as conf
 
-USER_PRIVILEGE_ADMIN = 0
-USER_PRIVILEGE_MEMBER = 1
-USER_PRIVILEGE_VIP = 2
-
 COOKIE_FORMAT = {'uid':-1, 'login_time':''}
 cookie_auth_time = conf.COOKIE_AUTH_MAX_TIME
 cookie_auth_name = conf.COOKIE_AUTH_NAME
-
-USER_STATUS_ACTIVE = 'active'
-USER_STATUS_LOCKED = 'locked'
 
 urls = (
         '/?', 'UserIndex',
         '/login/?', 'Login',
         '/logout', 'Logout',
         '/register', 'Register',
+        '/nickname/?', 'Nickname',
+        '/setpasswd/?', 'SetPassword',
+        
         )
+
+render = web.template.render('templates/user')
 
 def revocation():
     auth = copy.deepcopy(COOKIE_FORMAT)
@@ -47,7 +45,6 @@ def accredit(user):
         auth['uid'] = user.id
         auth['login_time'] = time.strftime('%Y-%m-%d %X', time.localtime())
         auth = encryptor.arc4_encode(json.dumps(auth))
-        print auth
         if auth:
             web.setcookie(cookie_auth_name, auth, expires=cookie_auth_time, httponly=True, path='/')
 
@@ -98,7 +95,42 @@ class UserResponse(FooResponse):
             ret['root']['message'] = 'Error message.'
         return json.dumps(ret)
 
-render = web.template.render('templates/user')
+class UserValidation(Validation):
+    @staticmethod
+    def check_login(email, password):
+        ispass = False
+        print email
+        print type(email)
+        print Validation.isString(email)
+        print Validation.isEmail(email)
+        print Validation.isEmpty(password)
+        if Validation.isEmail(email) and not Validation.isEmpty(password):
+            ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_register(email, passwd, repasswd):
+        ispass = False
+        if Validation.isEmail(email) and not Validation.isEmpty(passwd) \
+            and not Validation.isEmpty(repasswd):
+            if passwd == repasswd:
+                ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_nickname(nickname):
+        ispass = False
+        if Validation.isName(nickname):
+            ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_setpassword(passwd, newpasswd, rnewpasswd):
+        ispass = False
+        if Validation.isString(passwd) and Validation.isString(newpasswd) and Validation.isString(rnewpasswd):
+            if newpasswd == rnewpasswd:
+                ispass = True
+        return ispass
 
 class Login(UserResponse, FooAuth):
     def __init__(self):
@@ -116,9 +148,11 @@ class Login(UserResponse, FooAuth):
     
     def POST(self):
         email, password = web.input().email, web.input().password
+        if not UserValidation.check_login(email, password):
+            return self.dataerror()
         try:
             query = web.ctx.mygift.query(User)
-            user = query.filter(User.email == email).filter(User.ustatus == USER_STATUS_ACTIVE).first()
+            user = query.filter(User.email == email).filter(User.ustatus == FooStatus.USER_STATUS_ACTIVE).first()
             print user
             ret = self.forbidden()
             if user is not None:
@@ -136,7 +170,6 @@ class Login(UserResponse, FooAuth):
             raise
         return ret
      
-    
 class Logout(UserResponse):
     def __init__(self):
         UserResponse.__init__(self)
@@ -145,7 +178,6 @@ class Logout(UserResponse):
         revocation()
         return self.logout_success()
         
-    
 class Register(UserResponse, FooAuth):
     def __init__(self):
         UserResponse.__init__(self)
@@ -156,6 +188,9 @@ class Register(UserResponse, FooAuth):
 
     def POST(self):
         email, passwd, repasswd = web.input().email, web.input().password, web.input().repassword
+        if not UserValidation.check_register(email, passwd, repasswd):
+            return self.dataerror()
+        
         ret = self.register_failed()
         try:
             if passwd == repasswd:
@@ -190,6 +225,78 @@ class Register(UserResponse, FooAuth):
             if user:
                 flag = True   
         return flag
+    
+class Nickname(UserResponse, FooAuth):
+    def __init__(self):
+        UserResponse.__init__(self)
+        FooAuth.__init__(self)
+    
+    def POST(self):
+        if self.is_logged:
+            nickname = web.input().nickname
+            if not UserValidation.check_nickname(nickname):
+                return self.dataerror()
+            
+            uid = self.uid
+            user = self._getUserById(uid)
+            uret = self.failed()
+            if user:
+                user.nickname = nickname
+                if web.ctx.mygift.is_modified(user):
+                    web.ctx.mygift.add(user)
+                    uret = self.success()
+                else:
+                    uret = self.notmodified()
+            return uret
+        
+        else:
+            return self.forbidden()
+    
+    def _getUserById(self, uid):
+        user = False
+        if uid:
+            query = web.ctx.mygift.query(User)
+            row = query.filter(User.id == uid).first()
+            if row:
+                user = row
+        return user
+    
+class SetPassword(UserResponse, FooAuth):
+    def __init__(self):
+        UserResponse.__init__(self)
+        FooAuth.__init__(self)
+        
+    def POST(self):
+        if self.is_logged:
+            passwd, newpasswd, rnewpasswd = web.input().password, web.input().newpassword, web.input().rnewpassword
+            if not UserValidation.check_setpassword(passwd, newpasswd, rnewpasswd):
+                return self.dataerror()
+            uid = self.uid
+            user = self._getUserById(uid)
+            uret = self.failed()
+            if user:
+                if user.password != hashlib.md5(passwd):
+                    uret = self.forbidden()
+                else:
+                    newpasswd = hashlib.md5(newpasswd)
+                    user.password = newpasswd
+                    if web.ctx.mygift.is_modified(user):
+                        web.ctx.mygift.add(user)
+                        uret = self.success()
+                    else:
+                        uret = self.notmodified()
+            return uret
+        else:
+            return self.forbidden()
+        
+    def _getUserById(self, uid):
+        user = False
+        if uid:
+            query = web.ctx.mygift.query(User)
+            row = query.filter(User.id == uid).first()
+            if row:
+                user = row
+        return user
     
 app = web.application(urls, globals())
 app.notfound = notfound

@@ -6,9 +6,9 @@ Created on 2012-1-10
 '''
 
 from apps.fooinc import FooResponse, notfound, internalerror, FooAuth
-from apps.my import MY_WISH_STATUS_FOLLOW, MY_WISH_STATUS_BUYED
+from apps.my import FooStatus
+from libs.utils import Validation
 from models.mygift import Product, WishList
-from sqlalchemy.sql.expression import or_
 import json
 import web
 
@@ -36,22 +36,17 @@ class SearchResponse(FooResponse):
         
         return json.dumps(ret)
 
-class SearchIndex:
-    def GET(self): 
-        raise web.seeother('/product/title')
-
-render = web.template.render('templates/search')
-
 class MyProductFlag:
     
     @staticmethod
     def setMyFlag(uid, products):
         query = web.ctx.mygift.query(WishList.product_pkey, WishList.wlstatus)
         wishlist_follow = query.filter(WishList.user_id == uid).\
-                filter(WishList.wlstatus == MY_WISH_STATUS_FOLLOW).all()
+                filter(WishList.wlstatus == FooStatus.MY_WISH_STATUS_FOLLOW).all()
         wishlist_follow_p, wishlist_follow_s = MyProductFlag._to_list(wishlist_follow)
         wishlist_buyed  = query.filter(WishList.user_id == uid).\
-                filter(or_(WishList.wlstatus == MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+" ')).all()
+            filter(WishList.wlstatus == FooStatus.MY_WISH_STATUS_BUYED).all()
+                #filter(or_(WishList.wlstatus == FooStatus.MY_WISH_STATUS_BUYED, 'wlstatus REGEXP "[0-9]+" ')).all()
         wishlist_buyed_p, wishlist_buyed_s = MyProductFlag._to_list(wishlist_buyed)
         for i in range(len(products)):
             if products[i].pkey in wishlist_follow_p:
@@ -69,24 +64,47 @@ class MyProductFlag:
             pkeys.append(grows[i][0])
             status.append(grows[i][1])
         return pkeys, status
+    
+class SearchValidation(Validation):
+    @staticmethod
+    def check_string(search):
+        ispass = False
+        if Validation.isString(search) and not Validation.isEmpty(search):
+            ispass = True
+        return ispass
+    
+    @staticmethod
+    def check_searchproduct(search):
+        return SearchValidation.check_string(search)
+    
+    @staticmethod
+    def check_searchproductbyid(search):
+        return SearchValidation.check_string(search) and Validation.isIntId(search)
+    
+    @staticmethod
+    def check_searchproductbypkey(search):
+        return Validation.isMd5(search)
 
 class SearchProduct(SearchResponse, FooAuth):
     def __init__(self):
         SearchResponse.__init__(self)
         FooAuth.__init__(self)
-    
-    def GET(self, search = None):
-        if self.is_logged:
-            return render.product()
-        else:
-            raise web.SeeOther('/user/login')
         
     def POST(self):
         if self.is_logged:
             search = web.input().search
-            products = self._search_product(search)
-            products = MyProductFlag.setMyFlag(self.uid, products)
-            return self.product_success(products)
+            if not SearchValidation.check_searchproduct(search):
+                return self.dataerror()
+            sret = self.failed()
+            try:
+                products = self._search_product(search)
+                products = MyProductFlag.setMyFlag(self.uid, products)
+                sret = self.product_success(products)
+            except:
+                pass
+                raise
+            
+            return sret
         else:
             return self.forbidden()
     
@@ -100,24 +118,26 @@ class SearchProduct(SearchResponse, FooAuth):
         products = query.filter(Product.title.like(like_search)).all()
         return products
         
-
-
 class SearchProductById(SearchResponse, FooAuth):
     def __init__(self):
         SearchResponse.__init__(self)
         FooAuth.__init__(self)
-    
-    def GET(self, search = None):
-        if self.is_logged:
-            return render.product()
-        else:
-            return web.SeeOther('../user')
         
     def POST(self):
         if self.is_logged:
             ptid = web.input().search
-            products = self._search_product_by_id(ptid)
-            return self.product_success(products)
+            if not SearchValidation.check_searchproductbyid(ptid):
+                return self.dataerror()
+            
+            mret = self.failed()
+            try:
+                products = self._search_product_by_id(ptid)
+                mret = self.product_success(products)
+            except:
+                pass
+                raise
+            
+            return mret
         else:
             return self.forbidden()
         
@@ -136,9 +156,19 @@ class SearchProductByPkey(SearchResponse, FooAuth):
     def POST(self):
         if self.is_logged:
             product_pkey = web.input().search
-            products = self._search_product_by_pkey(product_pkey)
-            products = MyProductFlag.setMyFlag(self.uid, products)
-            return self.product_success(products)
+            if not SearchValidation.check_searchproductbypkey(product_pkey):
+                return self.dataerror()
+            
+            sret = self.failed()
+            try:
+                products = self._search_product_by_pkey(product_pkey)
+                products = MyProductFlag.setMyFlag(self.uid, products)
+                sret = self.product_success(products)
+            except:
+                pass
+                raise
+            
+            return sret
         else:
             return self.forbidden()
         

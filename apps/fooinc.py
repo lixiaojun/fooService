@@ -74,6 +74,8 @@ class FooResponse:
     STATUS_CODE_NOTFOUND = 404
     STATUS_CODE_CONFLICT = 409
     STATUS_CODE_ERROR = 500
+    STATUS_CODE_DATAERROR = 412
+    STATUS_CODE_NOTMODIFIED = 304
     
     def __init__(self):
         self.ret =  {'status':400,'root':{}}
@@ -123,18 +125,48 @@ class FooResponse:
         ret['root']['message'] = 'Not found.'
         return json.dumps(ret)
     
+    def notmodified(self):
+        return self._notmodified2json()
+    
+    def _notmodified2json(self):
+        ret = self._ret()
+        ret['status'] = self.STATUS_CODE_NOTMODIFIED
+        ret['root']['message'] = 'Not Modified.'
+        return json.dumps(ret)
+    
     def conflict(self):
         return self._conflict2json()
     
     def _conflict2json(self):
         ret = self._ret()
         ret['status'] = self.STATUS_CODE_CONFLICT
-        ret['root']['message'] = 'Data Already Exist.'
+        ret['root']['message'] = 'Specified datab already exists.'
         return json.dumps(ret)
     
+    def dataerror(self):
+        return self._dataerror2json()
+        
+    def _dataerror2json(self):
+        ret = self._ret()
+        ret['status'] = self.STATUS_CODE_DATAERROR
+        ret['root']['message'] = 'The submitted data errors.'
+        return json.dumps(ret)
+        
     def _ret(self):
         self.ret =  {'status':400,'root':{}}
         return self.ret
+    
+class FooStatus:
+    MY_WISH_STATUS_FOLLOW = 'follow'
+    MY_WISH_STATUS_DELETED = 'deleted'
+    MY_WISH_STATUS_BUYED = 'buyed'
+    
+    USER_PRIVILEGE_ADMIN = 0
+    USER_PRIVILEGE_MEMBER = 1
+    USER_PRIVILEGE_VIP = 2
+    
+    USER_STATUS_ACTIVE = 'active'
+    USER_STATUS_LOCKED = 'locked'
 
 class Log(WsgiLog):
     def __init__(self, application):

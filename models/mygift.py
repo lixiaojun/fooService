@@ -22,7 +22,7 @@ def tostring(dt):
         return dt
 
 _con_str = "mysql://root:wishlist2012@localhost:3306/mygift?charset=utf8"
-db = create_engine(_con_str, echo=False)
+db = create_engine(_con_str, echo=True)
 
 metadata = MetaData(db)
 
@@ -104,5 +104,9 @@ if __name__ == "__main__":
     print type(dt)
     if isinstance(dt, datetime.datetime):
         print dt.strftime('%Y-%m-%d %X')
+    
+    product = Product()
+    print product.id
     '''
+    
     pass
