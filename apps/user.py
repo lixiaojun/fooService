@@ -35,13 +35,13 @@ urls = (
 render = web.template.render('templates/user')
 
 def revocation():
-    auth = copy.deepcopy(COOKIE_FORMAT)
+    auth = {'uid':-1, 'login_time':''}
     auth = encryptor.arc4_encode(json.dumps(auth))
     web.setcookie(cookie_auth_name, auth, expires=-7, httponly=True, path='/')
     
 def accredit(user):
     if user is not None and user.id > 0:
-        auth = copy.deepcopy(COOKIE_FORMAT)
+        auth = {'uid':-1, 'login_time':''}
         auth['uid'] = user.id
         auth['login_time'] = time.strftime('%Y-%m-%d %X', time.localtime())
         auth = encryptor.arc4_encode(json.dumps(auth))
@@ -96,38 +96,38 @@ class UserResponse(FooResponse):
         return json.dumps(ret)
 
 class UserValidation(Validation):
-    @staticmethod
-    def check_login(email, password):
+    @classmethod
+    def check_login(cls, email, password):
         ispass = False
         print email
         print type(email)
-        print Validation.isString(email)
-        print Validation.isEmail(email)
-        print Validation.isEmpty(password)
-        if Validation.isEmail(email) and not Validation.isEmpty(password):
+        print cls.isString(email)
+        print cls.isEmail(email)
+        print cls.isEmpty(password)
+        if cls.isEmail(email) and not cls.isEmpty(password):
             ispass = True
         return ispass
     
-    @staticmethod
-    def check_register(email, passwd, repasswd):
+    @classmethod
+    def check_register(cls, email, passwd, repasswd):
         ispass = False
-        if Validation.isEmail(email) and not Validation.isEmpty(passwd) \
-            and not Validation.isEmpty(repasswd):
+        if cls.isEmail(email) and not cls.isEmpty(passwd) \
+            and not cls.isEmpty(repasswd):
             if passwd == repasswd:
                 ispass = True
         return ispass
     
-    @staticmethod
-    def check_nickname(nickname):
+    @classmethod
+    def check_nickname(cls, nickname):
         ispass = False
-        if Validation.isName(nickname):
+        if cls.isName(nickname):
             ispass = True
         return ispass
     
-    @staticmethod
-    def check_setpassword(passwd, newpasswd, rnewpasswd):
+    @classmethod
+    def check_setpassword(cls, passwd, newpasswd, rnewpasswd):
         ispass = False
-        if Validation.isString(passwd) and Validation.isString(newpasswd) and Validation.isString(rnewpasswd):
+        if cls.isString(passwd) and cls.isString(newpasswd) and Validation.isString(rnewpasswd):
             if newpasswd == rnewpasswd:
                 ispass = True
         return ispass
@@ -153,7 +153,6 @@ class Login(UserResponse, FooAuth):
         try:
             query = web.ctx.mygift.query(User)
             user = query.filter(User.email == email).filter(User.ustatus == FooStatus.USER_STATUS_ACTIVE).first()
-            print user
             ret = self.forbidden()
             if user is not None:
                 passwd = hashlib.md5(password).hexdigest()

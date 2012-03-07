@@ -10,6 +10,7 @@ from apps.my import FooStatus
 from libs.utils import Validation
 from models.mygift import Product, WishList
 import json
+import re
 import web
 
 urls = (
@@ -66,24 +67,24 @@ class MyProductFlag:
         return pkeys, status
     
 class SearchValidation(Validation):
-    @staticmethod
-    def check_string(search):
+    @classmethod
+    def check_string(cls, search):
         ispass = False
-        if Validation.isString(search) and not Validation.isEmpty(search):
+        if cls.isString(search) and not cls.isEmpty(search):
             ispass = True
         return ispass
     
-    @staticmethod
-    def check_searchproduct(search):
-        return SearchValidation.check_string(search)
+    @classmethod
+    def check_searchproduct(cls, search):
+        return cls.check_string(search)
     
-    @staticmethod
-    def check_searchproductbyid(search):
-        return SearchValidation.check_string(search) and Validation.isIntId(search)
+    @classmethod
+    def check_searchproductbyid(cls, search):
+        return cls.check_string(search) and cls.isIntId(search)
     
-    @staticmethod
-    def check_searchproductbypkey(search):
-        return Validation.isMd5(search)
+    @classmethod
+    def check_searchproductbypkey(cls, search):
+        return cls.isMd5(search)
 
 class SearchProduct(SearchResponse, FooAuth):
     def __init__(self):
@@ -111,12 +112,20 @@ class SearchProduct(SearchResponse, FooAuth):
         
     def _search_product(self, search):
         if search is None:
-            search = 'Nothing'
-                 
-        like_search = '%'+search+'%'    
+            search = 'Nothing'     
+        like_search = self._generate_where_statement(search)   
         query = web.ctx.mygift.query(Product)
         products = query.filter(Product.title.like(like_search)).all()
         return products
+    
+    def _generate_where_statement(self, search):
+        search = re.sub(r'^ +| +$', '', search)
+        search = re.sub('\s{2,}', ' ', search)
+        separators_regexp='[\s\,\+\-:\?\.]|，|？|：| '
+        search = re.sub(separators_regexp, '%', search)
+        search = "%"+search+"%"
+        search = re.sub('%{2,}', '%', search)
+        return search
         
 class SearchProductById(SearchResponse, FooAuth):
     def __init__(self):

@@ -36,31 +36,32 @@ class MyResponse(FooResponse):
 
 class MyValidation(Validation):
     
-    @staticmethod
-    def check_pkey(pkey):
+    @classmethod
+    def check_pkey(cls, pkey):
         ispass = False
-        if Validation.isMd5(pkey):
+        if cls.isMd5(pkey):
             ispass = True
         return ispass
     
-    @staticmethod
-    def check_mywishadd(pkey):
-        return MyValidation.check_pkey(pkey)
+    @classmethod
+    def check_mywishadd(cls,pkey):
+        return cls.check_pkey(pkey)
     
-    @staticmethod
-    def check_mywishexpectprice(price, pkey):
+    @classmethod
+    def check_mywishexpectprice(cls, price, pkey):
         ispass = False
-        if Validation.isMd5(pkey) and Validation.isPrice(price):
+        if cls.isMd5(pkey) and cls.isPrice(price):
             ispass = True
         return ispass
     
-    @staticmethod
-    def check_mywishundo(pkey):
-        return MyValidation.check_pkey(pkey)
+    @classmethod
+    def check_mywishundo(cls, pkey):
+        return cls.check_pkey(pkey)
 
-    @staticmethod
-    def check_mywishbuyed(pkey):
-        return MyValidation.check_pkey(pkey)          
+    @classmethod
+    def check_mywishbuyed(cls, pkey):
+        return cls.check_pkey(pkey) 
+             
 class MyWishAdd(MyResponse, FooAuth):
     def __init__(self):
         MyResponse.__init__(self)
@@ -74,22 +75,25 @@ class MyWishAdd(MyResponse, FooAuth):
             
             uid = self.uid
             gift = self._gift_exsit(uid, pkey)
-            
+            rets = self.conflict()
             if not gift:
                 new = WishList()
                 new.user_id = uid
                 new.product_pkey = pkey
                 new.create_time = time.strftime('%Y-%m-%d %X', time.localtime())
+                new.last_operate_time = new.create_time
                 new.wlstatus = FooStatus.MY_WISH_STATUS_FOLLOW
                 web.ctx.mygift.add(new)
                 
-                return self.success()
+                rets = self.success()
             else:
                 if gift.wlstatus == FooStatus.MY_WISH_STATUS_DELETED:
                     gift.wlstatus = FooStatus.MY_WISH_STATUS_FOLLOW
+                    gift.last_operate_time = time.strftime('%Y-%m-%d %X', time.localtime())
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
-                    return self.success()
+                    rets = self.success()
+            return rets
         else:
             return self.forbidden()
     
@@ -120,6 +124,7 @@ class MyWishExpectPrice(MyResponse, FooAuth):
             mret = self.failed()
             if gift:
                 gift.expect_price = price
+                gift.last_operate_time = time.strftime('%Y-%m-%d %X', time.localtime())
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
                     mret = self.success()
@@ -147,6 +152,7 @@ class MyWishUndo(MyResponse, FooAuth):
             mret = self.failed()
             if gift is not None:
                 gift.wlstatus = FooStatus.MY_WISH_STATUS_DELETED
+                gift.last_operate_time = time.strftime('%Y-%m-%d %X', time.localtime())
                 if web.ctx.mygift.is_modified(gift):
                     web.ctx.mygift.add(gift)
                     mret = self.success()

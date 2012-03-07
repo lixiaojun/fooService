@@ -23,3 +23,12 @@ log_backups = 1
 COOKIE_AUTH_KEY_ARC4 = 'YNDtvGbzRCKzEOoPKDTwo3ZTzVYX'
 COOKIE_AUTH_NAME = 'CYE_SESSIONID'
 COOKIE_AUTH_MAX_TIME = 24*60*60*90
+
+REDISDB_CONF = {
+                'host': 'localhost',
+                'port': 6379,
+                'db': 0,
+                'passwd': 'hello1234'
+              }
+
+REDIS_UPDATE_URLS_KEY = '%s:update'
